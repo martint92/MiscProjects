@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby 
+
+#I wrote this file to search my computer for duplicate files and delete them. 
+
+require 'fileutils'
+require 'digest'
+
+PWD = `pwd`.gsub("\n", "") + "/"
+
+def get_files_and_directories(path)
+	files = Dir.glob(path + "**/*") - %w(. .. .DS_Store)
+	directories = Array.new
+	files.each {|file| directories << file if File.directory? file}
+	files = files - directories
+	[files, directories]
+end
+
+def get_hash(files)
+	file_hash = Hash.new
+	files.each do |file| 
+		value = Digest::SHA256.digest File.open(file).read 
+		file_hash[file] = value
+	end
+	file_hash
+end 
+
+def clear_files(one, two)
+	one.each do |key1, value1|
+		two.each do |key2, value2|
+			if value1 == value2 && key1 != key2
+				FileUtils.rm key2 
+				puts "\t#{key1.gsub(PWD, "")}\t||\t#{key2.gsub(PWD, "")} "
+				one.delete(key2)
+				two.delete(key2)
+			end
+		end
+	end
+	one 
+end
+
+def clear_dir(directories) 
+	directories.each do |dir| 
+		ent = Dir.entries(dir) - %w(. .. .DS_Store)
+		FileUtils.rmdir(dir) if ent.empty?
+		puts "\t" + dir if ent.empty?
+	end 
+end
+
+def fix_path(path)
+	new_path = path.gsub("\\ ", " ").strip
+	new_path = PWD + new_path unless new_path[0..5] == "/Users" 
+	new_path[0] == "/" ? new_path : new_path = "/" + new_path
+	new_path[-1] == "/" ? new_path : new_path + "/" 
+end 
+
+def prgm(path)
+	print "Scanning " ; print fix_path(path) ; print "..."
+	files, directories = get_files_and_directories(fix_path(path))
+	file_hash= get_hash(files)
+	puts "Done" ; print "\t cleaning files..."
+	clear_files(file_hash, file_hash)
+	puts "\t cleaning directories" ; clear_dir(directories)
+	puts "Finished."
+end
+
+prgm(ARGV[0])
+
+
+
+
+
+
+
+
+
+
+
+
